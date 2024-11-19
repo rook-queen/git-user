@@ -11,40 +11,42 @@ const COMMANDS: [&'static str; 3] = ["Exit", "Show Current User", "Configure Use
 fn main() {
     loop {
         match handle_input() {
-            Ok(num) => match num {
-                0 => {
-                    break;
-                }
-                1 => {
-                    // show user
-                    let res = env_git_user();
-                    if let Err(err_msg) = res {
-                        println!("{}", err_msg);
+            Ok(num) => {
+                match num {
+                    0 => {
                         break;
                     }
-                    let data = res.unwrap();
-                    println!("{}", data);
-                }
-                2 => {
-                    println!("Input user.name and user.email separated by a new line, 0 = ignore");
-                    // configure user
-                    let res = stdin_git_uesr();
-                    if let Err(_) = res {
-                        println!("Failed to get user from input");
-                        break;
+                    1 => {
+                        // show user
+                        let res = env_git_user();
+                        if let Err(err_msg) = res {
+                            println!("{}", err_msg);
+                            break;
+                        }
+                        let data = res.unwrap();
+                        println!("{}", data);
                     }
-                    let data = res.unwrap();
-                    let set_res = data.set_as_current();
-                    if let Err(_) = set_res {
-                        println!("Failed to set data as current user");
-                        break;
+                    2 => {
+                        println!("Input name,email,signingkey,gpgsign separated by a new line, 0 = ignore");
+                        // configure user
+                        let res = stdin_git_uesr();
+                        if let Err(_) = res {
+                            println!("Failed to get user from input");
+                            break;
+                        }
+                        let data = res.unwrap();
+                        let set_res = data.set_as_current();
+                        if let Err(_) = set_res {
+                            println!("Failed to set data as current user");
+                            break;
+                        }
+                        println!("Successfully set as current user!\n{}", data);
                     }
-                    println!("Successfully set as current user!\n{}", data);
+                    _ => {
+                        println!("Unimplemented Command. Sorry >_<")
+                    }
                 }
-                _ => {
-                    println!("Unimplemented Command. Sorry >_<")
-                }
-            },
+            }
             Err(msg) => {
                 println!("{}", msg);
             }
@@ -55,19 +57,27 @@ fn main() {
 struct GitUserData {
     name: String,
     email: String,
+    signingkey: String,
+    gpgsign: String,
 }
 
 impl GitUserData {
     fn set_as_current(&self) -> Result<(), Box<dyn std::error::Error>> {
         set_git_config_property("user.name", &self.name)?;
         set_git_config_property("user.email", &self.email)?;
+        set_git_config_property("user.signingkey", &self.signingkey)?;
+        set_git_config_property("user.gpgsign", &self.gpgsign)?;
         Ok(())
     }
 }
 
 impl Display for GitUserData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "user.name: {}\nuser.email: {}", self.name, self.email)
+        write!(
+            f,
+            "user.name: {}\nuser.email: {}\nuser.signingkey: {}\ncommit.gpgsign: {}",
+            self.name, self.email, self.signingkey, self.gpgsign
+        )
     }
 }
 
@@ -75,20 +85,22 @@ fn stdin_git_uesr() -> Result<GitUserData, Box<dyn std::error::Error>> {
     let mut user_data = GitUserData {
         name: String::new(),
         email: String::new(),
+        signingkey: String::new(),
+        gpgsign: String::new(),
     };
 
-    let mut val = readline_til_not_empty();
-    user_data.name = match val.as_str() {
-        "0" => get_git_config_property("user.name")?,
-        _ => val.to_owned(),
-    };
-    val = readline_til_not_empty();
-    user_data.email = match val.as_str() {
-        "0" => get_git_config_property("user.email")?,
-        _ => val.to_owned(),
-    };
-
+    user_data.name = get_or_default(readline_til_not_empty().as_str(), "user.name")?;
+    user_data.email = get_or_default(readline_til_not_empty().as_str(), "user.email")?;
+    user_data.signingkey = get_or_default(readline_til_not_empty().as_str(), "user.signingkey")?;
+    user_data.gpgsign = get_or_default(readline_til_not_empty().as_str(), "commit.gpgsign")?;
     Ok(user_data)
+}
+
+fn get_or_default(val: &str, property: &str) -> Result<String, String> {
+    match val {
+        "0" => get_git_config_property(property),
+        _ => Ok(val.to_owned()),
+    }
 }
 
 /**
@@ -112,6 +124,8 @@ fn env_git_user() -> Result<GitUserData, String> {
     let user_data = GitUserData {
         name: get_git_config_property("user.name")?,
         email: get_git_config_property("user.email")?,
+        signingkey: get_git_config_property("user.signingkey")?,
+        gpgsign: get_git_config_property("commit.gpgsign")?,
     };
     Ok(user_data)
 }
