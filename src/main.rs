@@ -29,7 +29,7 @@ fn main() {
                     2 => {
                         println!("Input name,email,signingkey,gpgsign separated by a new line, 0 = ignore");
                         // configure user
-                        let res = stdin_git_uesr();
+                        let res = stdin_git_user();
                         if let Err(_) = res {
                             println!("Failed to get user from input");
                             break;
@@ -81,7 +81,7 @@ impl Display for GitUserData {
     }
 }
 
-fn stdin_git_uesr() -> Result<GitUserData, Box<dyn std::error::Error>> {
+fn stdin_git_user() -> Result<GitUserData, Box<dyn std::error::Error>> {
     let mut user_data = GitUserData {
         name: String::new(),
         email: String::new(),
