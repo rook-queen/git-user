@@ -66,7 +66,7 @@ impl GitUserData {
         set_git_config_property("user.name", &self.name)?;
         set_git_config_property("user.email", &self.email)?;
         set_git_config_property("user.signingkey", &self.signingkey)?;
-        set_git_config_property("user.gpgsign", &self.gpgsign)?;
+        set_git_config_property("commit.gpgsign", &self.gpgsign)?;
         Ok(())
     }
 }
