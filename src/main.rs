@@ -1,16 +1,19 @@
-use std::{fmt::Display, io::stdin, process::Command};
+use std::{
+    fmt::Display,
+    io::stdin,
+    process::{Command, Output},
+};
 
 use text_io::try_read;
 
 const COMMANDS: [&'static str; 3] = ["Exit", "Show Current User", "Configure User (local)"];
 
 fn main() {
-    let mut running = true;
-    while running {
+    loop {
         match handle_input() {
             Ok(num) => match num {
                 0 => {
-                    running = false;
+                    break;
                 }
                 1 => {
                     // show user
@@ -23,6 +26,7 @@ fn main() {
                     println!("{}", data);
                 }
                 2 => {
+                    println!("Input user.name and user.email separated by a new line, empty line = ignore");
                     // configure user
                     let res = stdin_git_uesr();
                     if let Err(_) = res {
@@ -30,8 +34,12 @@ fn main() {
                         break;
                     }
                     let data = res.unwrap();
-                    println!("{}", data);
-                    unimplemented!();
+                    let set_res = data.set_as_current();
+                    if let Err(_) = set_res {
+                        println!("Failed to set data as current user");
+                        break;
+                    }
+                    println!("Successfully set as current user!\n{}", data);
                 }
                 _ => {
                     println!("Unimplemented Command. Sorry >_<")
@@ -49,6 +57,14 @@ struct GitUserData {
     email: String,
 }
 
+impl GitUserData {
+    fn set_as_current(&self) -> Result<(), Box<dyn std::error::Error>> {
+        set_git_config_property("user.name", &self.name)?;
+        set_git_config_property("user.email", &self.email)?;
+        Ok(())
+    }
+}
+
 impl Display for GitUserData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "user.name: {}\nuser.email: {}", self.name, self.email)
@@ -63,10 +79,20 @@ fn stdin_git_uesr() -> Result<GitUserData, Box<dyn std::error::Error>> {
 
     let mut val = String::with_capacity(25);
     stdin().read_line(&mut val)?;
-    user_data.name = val.clone();
+    user_data.name = if val.trim().len() > 0 {
+        val.clone()
+    } else {
+        get_git_config_property("user.name")?
+    };
+
+    val.clear();
 
     stdin().read_line(&mut val)?;
-    user_data.email = val;
+    user_data.email = if val.trim().len() > 0 {
+        val
+    } else {
+        get_git_config_property("user.email")?
+    };
 
     Ok(user_data)
 }
@@ -95,6 +121,12 @@ fn get_git_config_property(config_property: &str) -> Result<String, String> {
             return Err(format!("Failed to get {} due to {}", config_property, sth));
         }
     }
+}
+
+fn set_git_config_property(config_property: &str, val: &str) -> Result<Output, std::io::Error> {
+    Command::new("git")
+        .args(["config", config_property, val])
+        .output()
 }
 
 fn handle_input() -> Result<i32, &'static str> {
