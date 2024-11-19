@@ -14,7 +14,7 @@ fn main() {
                 }
                 1 => {
                     // show user
-                    let res = get_git_user();
+                    let res = env_git_user();
                     if let Err(err_msg) = res {
                         println!("{}", err_msg);
                         break;
@@ -24,7 +24,7 @@ fn main() {
                 }
                 2 => {
                     // configure user
-                    let res = set_git_user();
+                    let res = stdin_git_uesr();
                     if let Err(_) = res {
                         println!("Failed to get user from input");
                         break;
@@ -55,7 +55,7 @@ impl Display for GitUserData {
     }
 }
 
-fn set_git_user() -> Result<GitUserData, Box<dyn std::error::Error>> {
+fn stdin_git_uesr() -> Result<GitUserData, Box<dyn std::error::Error>> {
     let mut user_data = GitUserData {
         name: String::new(),
         email: String::new(),
@@ -71,7 +71,7 @@ fn set_git_user() -> Result<GitUserData, Box<dyn std::error::Error>> {
     Ok(user_data)
 }
 
-fn get_git_user() -> Result<GitUserData, String> {
+fn env_git_user() -> Result<GitUserData, String> {
     let user_data = GitUserData {
         name: get_git_config_property("user.name")?,
         email: get_git_config_property("user.email")?,
