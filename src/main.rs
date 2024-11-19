@@ -26,7 +26,7 @@ fn main() {
                     println!("{}", data);
                 }
                 2 => {
-                    println!("Input user.name and user.email separated by a new line, empty line = ignore");
+                    println!("Input user.name and user.email separated by a new line, 0 = ignore");
                     // configure user
                     let res = stdin_git_uesr();
                     if let Err(_) = res {
@@ -77,24 +77,35 @@ fn stdin_git_uesr() -> Result<GitUserData, Box<dyn std::error::Error>> {
         email: String::new(),
     };
 
-    let mut val = String::with_capacity(25);
-    stdin().read_line(&mut val)?;
-    user_data.name = if val.trim().len() > 0 {
-        val.clone()
-    } else {
-        get_git_config_property("user.name")?
+    let mut val = readline_til_not_empty();
+    user_data.name = match val.as_str() {
+        "0" => get_git_config_property("user.name")?,
+        _ => val.to_owned(),
     };
-
-    val.clear();
-
-    stdin().read_line(&mut val)?;
-    user_data.email = if val.trim().len() > 0 {
-        val
-    } else {
-        get_git_config_property("user.email")?
+    val = readline_til_not_empty();
+    user_data.email = match val.as_str() {
+        "0" => get_git_config_property("user.email")?,
+        _ => val.to_owned(),
     };
 
     Ok(user_data)
+}
+
+/**
+ * Read line till a line is not empty (ignoring all whitespaces)
+ */
+fn readline_til_not_empty() -> String {
+    let mut buf = String::with_capacity(25);
+    loop {
+        if let Err(_) = stdin().read_line(&mut buf) {
+            dbg!("readline issue");
+        };
+        buf = buf.trim().to_owned(); // a bit underperformant
+        if buf.len() > 0 {
+            break;
+        }
+    }
+    buf
 }
 
 fn env_git_user() -> Result<GitUserData, String> {
@@ -111,7 +122,7 @@ fn get_git_config_property(config_property: &str) -> Result<String, String> {
         .output()
     {
         Ok(out) => match String::from_utf8(out.stdout) {
-            Ok(v) => Ok(v.trim().into()),
+            Ok(v) => Ok(v.trim().to_owned()),
             // Performance Issue, copy from v's slice into a new string and destruct v
             Err(_) => {
                 return Err(format!("Failed to convert {} to utf8", config_property));
