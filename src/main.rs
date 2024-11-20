@@ -25,6 +25,9 @@ fn main() {
                         }
                         let data = res.unwrap();
                         println!("{}", data);
+                        if data.gpgsign != "true" {
+                            println!("[Warning] commit.gpgsign != true. Auto-signing is disabled.");
+                        }
                     }
                     2 => {
                         println!("Input name,email,signingkey,gpgsign separated by a new line, 0 = ignore");
